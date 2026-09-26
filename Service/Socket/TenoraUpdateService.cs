@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.SignalR;
 using XeniaRentalBackend.Repositories.ManageMaintenance;
 using XeniaTenoraBackend.Hubs;
 
@@ -34,6 +34,7 @@ namespace XeniaTenoraBackend.Service.Socket
                 var maintenances = await _repository.GetMaintenance(
                     companyId,
                     tenantId,
+                    employeeId,
                     search
                 );
 

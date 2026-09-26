@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TenoraHub Socket & WebSocket Tester</title>
+    <!-- Microsoft SignalR JavaScript Client -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+            --text: #0f172a;
+            --text-muted: #64748b;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 24px;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        h2 {
+            margin-top: 0;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .badge-disconnected { background: #fee2e2; color: #991b1b; }
+        .badge-connecting { background: #fef3c7; color: #92400e; }
+        .badge-connected { background: #dcfce7; color: #166534; }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--text);
+        }
+
+        input[type="text"], input[type="number"], select, textarea {
+            width: 100%;
+            padding: 10px 12px;
+            box-sizing: border-box;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            background: #fff;
+            color: var(--text);
+            transition: border-color 0.2s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover { background-color: var(--primary-hover); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        button.btn-danger { background-color: var(--danger); }
+        button.btn-danger:hover { background-color: var(--danger-hover); }
+
+        button.btn-secondary { background-color: #64748b; }
+        button.btn-secondary:hover { background-color: #475569; }
+
+        #log {
+            background: #0f172a;
+            color: #38bdf8;
+            padding: 16px;
+            border-radius: 8px;
+            height: 480px;
+            overflow-y: auto;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .log-time { color: var(--text-muted); }
+        .log-success { color: #4ade80; }
+        .log-error { color: #f87171; }
+        .log-data { color: #facc15; }
+    </style>
+</head>
+<body>
+
+    <div style="max-width: 1100px; margin: 0 auto 20px auto;">
+        <h1 style="font-size: 1.75rem; margin-bottom: 6px;">📡 TenoraHub Real-Time Socket Tester</h1>
+        <p style="color: var(--text-muted); margin: 0;">Test WebSockets / SignalR real-time maintenance updates for ASP.NET Core backend</p>
+    </div>
+
+    <div class="container">
+        <!-- Controls Column -->
+        <div class="card">
+            <h2>Connection Settings <span id="statusBadge" class="badge badge-disconnected">Disconnected</span></h2>
+
+            <div class="form-group">
+                <label for="hubUrl">Hub URL Endpoint:</label>
+                <input type="text" id="hubUrl" value="/tenorahub">
+            </div>
+
+            <div class="form-group">
+                <label for="jwtToken">JWT Access Token (Optional):</label>
+                <input type="text" id="jwtToken" placeholder="Bearer eyJhbGciOi...">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="form-group">
+                    <label for="companyId">Company ID:</label>
+                    <input type="number" id="companyId" value="1">
+                </div>
+
+                <div class="form-group">
+                    <label for="employeeId">Employee ID (Optional):</label>
+                    <input type="number" id="employeeId" placeholder="e.g. 10">
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button id="btnConnect" onclick="connectSocket()">Connect & Join Group</button>
+                <button id="btnDisconnect" class="btn-danger" onclick="disconnectSocket()" disabled>Disconnect</button>
+            </div>
+
+            <hr style="border: none; border-top: 1px solid var(--border); margin: 24px 0;">
+
+            <h2>Manual Actions</h2>
+
+            <div class="btn-group">
+                <button id="btnJoinComp" class="btn-secondary" onclick="joinCompanyGroup()" disabled>Join Company Group</button>
+                <button id="btnJoinEmp" class="btn-secondary" onclick="joinEmployeeGroup()" disabled>Join Employee Group</button>
+                <button id="btnTriggerUpdate" onclick="triggerUpdate()" disabled>Request Live Update</button>
+                <button id="btnClearLog" class="btn-secondary" onclick="clearLogs()">Clear Logs</button>
+            </div>
+        </div>
+
+        <!-- Logs Column -->
+        <div class="card">
+            <h2>Live Received Updates (`ReceiveMaintenanceUpdate`)</h2>
+            <div id="log">Waiting for connection...</div>
+        </div>
+    </div>
+
+    <script>
+        let connection = null;
+
+        function setStatus(state, label) {
+            const badge = document.getElementById('statusBadge');
+            badge.className = 'badge badge-' + state;
+            badge.innerText = label;
+        }
+
+        function appendLog(text, type = 'info') {
+            const logEl = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            let className = '';
+            if (type === 'success') className = 'log-success';
+            if (type === 'error') className = 'log-error';
+            if (type === 'data') className = 'log-data';
+
+            const entry = document.createElement('div');
+            entry.innerHTML = `<span class="log-time">[${time}]</span> <span class="${className}">${escapeHtml(text)}</span>`;
+            logEl.appendChild(entry);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function appendJson(data) {
+            const logEl = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            const jsonString = JSON.stringify(data, null, 2);
+
+            const entry = document.createElement('div');
+            entry.innerHTML = `<span class="log-time">[${time}]</span> <span class="log-data">📩 RECEIVED BROADCAST PAYLOAD:</span>\n<span style="color:#e2e8f0;">${escapeHtml(jsonString)}</span>\n`;
+            logEl.appendChild(entry);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        async function connectSocket() {
+            const hubUrl = document.getElementById('hubUrl').value;
+            const token = document.getElementById('jwtToken').value.trim();
+
+            setStatus('connecting', 'Connecting...');
+            appendLog(`Connecting to SignalR Hub at "${hubUrl}"...`);
+
+            const options = {};
+            if (token) {
+                options.accessTokenFactory = () => token;
+            }
+
+            connection = new signalR.HubConnectionBuilder()
+                .withUrl(hubUrl, options)
+                .withAutomaticReconnect()
+                .build();
+
+            // Listen for ReceiveMaintenanceUpdate broadcast
+            connection.on("ReceiveMaintenanceUpdate", function (data) {
+                appendJson(data);
+            });
+
+            connection.onreconnecting((err) => {
+                setStatus('connecting', 'Reconnecting...');
+                appendLog(`Reconnecting to Hub: ${err}`, 'error');
+            });
+
+            connection.onreconnected((connectionId) => {
+                setStatus('connected', 'Connected');
+                appendLog(`Reconnected! Connection ID: ${connectionId}`, 'success');
+            });
+
+            connection.onclose((err) => {
+                setStatus('disconnected', 'Disconnected');
+                appendLog(`Connection closed: ${err || 'Clean disconnect'}`, 'error');
+                toggleButtons(false);
+            });
+
+            try {
+                await connection.start();
+                setStatus('connected', 'Connected');
+                appendLog(`✅ Connected successfully! Connection ID: ${connection.connectionId}`, 'success');
+                toggleButtons(true);
+
+                // Auto-join groups based on form values
+                await autoJoin();
+
+            } catch (err) {
+                setStatus('disconnected', 'Failed');
+                appendLog(`❌ Connection failed: ${err.toString()}`, 'error');
+            }
+        }
+
+        async function autoJoin() {
+            const companyId = parseInt(document.getElementById('companyId').value) || 1;
+            const empVal = document.getElementById('employeeId').value;
+            const employeeId = empVal ? parseInt(empVal) : null;
+
+            await connection.invoke("JoinCompanyGroup", companyId);
+            appendLog(`Joined group: company-${companyId}`, 'success');
+
+            if (employeeId) {
+                await connection.invoke("JoinEmployeeGroup", companyId, employeeId);
+                appendLog(`Joined group: company-${companyId}-employee-${employeeId}`, 'success');
+            }
+        }
+
+        async function joinCompanyGroup() {
+            if (!connection) return;
+            const companyId = parseInt(document.getElementById('companyId').value) || 1;
+            try {
+                await connection.invoke("JoinCompanyGroup", companyId);
+                appendLog(`Invoked JoinCompanyGroup -> company-${companyId}`, 'success');
+            } catch (err) {
+                appendLog(`Error JoinCompanyGroup: ${err.toString()}`, 'error');
+            }
+        }
+
+        async function joinEmployeeGroup() {
+            if (!connection) return;
+            const companyId = parseInt(document.getElementById('companyId').value) || 1;
+            const empVal = document.getElementById('employeeId').value;
+            if (!empVal) {
+                appendLog("Please enter Employee ID to join Employee Group", "error");
+                return;
+            }
+            const employeeId = parseInt(empVal);
+            try {
+                await connection.invoke("JoinEmployeeGroup", companyId, employeeId);
+                appendLog(`Invoked JoinEmployeeGroup -> company-${companyId}-employee-${employeeId}`, 'success');
+            } catch (err) {
+                appendLog(`Error JoinEmployeeGroup: ${err.toString()}`, 'error');
+            }
+        }
+
+        async function triggerUpdate() {
+            if (!connection) return;
+            const companyId = parseInt(document.getElementById('companyId').value) || 1;
+            const empVal = document.getElementById('employeeId').value;
+            const employeeId = empVal ? parseInt(empVal) : null;
+
+            appendLog(`Invoking SendTenoraUpdate (Company: ${companyId}, Employee: ${employeeId || 'null'})...`);
+            try {
+                await connection.invoke("SendTenoraUpdate", companyId, null, employeeId, null, null, null, null);
+                appendLog(`SendTenoraUpdate invoked successfully`, 'success');
+            } catch (err) {
+                appendLog(`SendTenoraUpdate failed: ${err.toString()}`, 'error');
+            }
+        }
+
+        async function disconnectSocket() {
+            if (connection) {
+                await connection.stop();
+                connection = null;
+                setStatus('disconnected', 'Disconnected');
+                appendLog("Disconnected by user.");
+                toggleButtons(false);
+            }
+        }
+
+        function toggleButtons(connected) {
+            document.getElementById('btnConnect').disabled = connected;
+            document.getElementById('btnDisconnect').disabled = !connected;
+            document.getElementById('btnJoinComp').disabled = !connected;
+            document.getElementById('btnJoinEmp').disabled = !connected;
+            document.getElementById('btnTriggerUpdate').disabled = !connected;
+        }
+    </script>
+</body>
+</html>

@@ -324,7 +324,6 @@ namespace XeniaRentalBackend.Repositories.Auth
 
         #endregion
 
-
         #region EMPLOYEE
 
         public async Task<XRS_Employee?> AuthenticateEmployee(EmployeeLoginRequest request)
@@ -332,7 +331,6 @@ namespace XeniaRentalBackend.Repositories.Auth
             var employee = await _context.Employee
                 .Where(e =>
                     e.MobileNumber == request.MobileNumber &&
-                    e.CompanyId == request.CompanyId &&
                     e.IsActive == true)
                 .FirstOrDefaultAsync();
 
@@ -363,14 +361,14 @@ namespace XeniaRentalBackend.Repositories.Auth
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             var claims = new List<Claim>
-    {
-        new Claim(JwtRegisteredClaimNames.Sub, employee.MobileNumber),
-        new Claim("EmployeeId", employee.EmployeeId.ToString()),
-        new Claim("EmployeeCode", employee.EmployeeCode),
-        new Claim("CompanyId", employee.CompanyId.ToString()),
-        new Claim(ClaimTypes.Role, "Employee"),
-        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-    };
+            {
+                new Claim(JwtRegisteredClaimNames.Sub, employee.MobileNumber),
+                new Claim("EmployeeId", employee.EmployeeId.ToString()),
+                new Claim("EmployeeCode", employee.EmployeeCode),
+                new Claim("CompanyId", employee.CompanyId.ToString()),
+                new Claim(ClaimTypes.Role, "Employee"),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            };
 
             var token = new JwtSecurityToken(
                 issuer: issuer,
@@ -386,10 +384,6 @@ namespace XeniaRentalBackend.Repositories.Auth
         #endregion
 
 
-
     }
-
-
-
 
 }

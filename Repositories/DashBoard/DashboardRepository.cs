@@ -191,7 +191,7 @@ namespace XeniaRentalBackend.Repositories.Dashboard
         {
             var today = DateTime.Today;
 
-            int tenantId = _jwtHelperService.GetCustomerId();
+            int tenantId = _jwtHelperService.GetTenantIdId();
 
             var assignment = await _context.TenantAssignemnts
                 .AsNoTracking()
@@ -244,9 +244,7 @@ namespace XeniaRentalBackend.Repositories.Dashboard
                 firstMonth.Month,
                 firstValidDay);
 
-            // chargeAnchorDate mirrors the "first due month" anchor used in the
-            // other endpoints' IsChargeDue fallback (when a charge has never been
-            // actually invoiced yet).
+    
             DateTime chargeAnchorDate = firstMonth;
 
             var vouchers = await _context.Vouchers
@@ -309,16 +307,7 @@ namespace XeniaRentalBackend.Repositories.Dashboard
                     g => g.Key,
                     g => g.ToList());
 
-            // FIX (same pattern as GetTenantChargesByMonthAsync):
-            // Build a lookup of the last actual RentYear/RentMonth a given charge
-            // was invoiced for, plus the amount it was invoiced at, so that:
-            //  1) due-date checks for periodic (2Months/Quarterly/etc.) charges are
-            //     anchored to when the charge was actually last billed, not just a
-            //     simple modulo off the agreement start date (which drifts/repeats
-            //     incorrectly once a voucher has been raised mid-cycle).
-            //  2) variable charges in the "Not Initiated" preview show the last real
-            //     billed amount instead of the (often 0) placeholder configured in
-            //     UnitChargesMappings.
+       
             var voucherInfoLookup = vouchers
                 .ToDictionary(v => v.VoucherID, v => new { v.RentYear, v.RentMonth });
 

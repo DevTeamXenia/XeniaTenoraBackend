@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using XeniaRentalBackend.Dtos;
 using XeniaRentalBackend.Models;
 using XeniaRentalBackend.Repositories.EmployeeMaster;
+using XeniaRentalBackend.Service.Common;
 
 namespace XeniaRentalBackend.Controllers
 {
@@ -14,13 +14,15 @@ namespace XeniaRentalBackend.Controllers
     {
         private readonly IEmployeeRepository _employeeRepository;
         private readonly ApplicationDbContext _context;
+        private readonly JwtHelperService _jwtHelperService;
 
         public EmployeeController(
        IEmployeeRepository employeeRepository,
-       ApplicationDbContext context)
+       ApplicationDbContext context, JwtHelperService jwtHelperService)
         {
             _employeeRepository = employeeRepository;
             _context = context;
+            _jwtHelperService = jwtHelperService;
         }
 
 
@@ -48,29 +50,9 @@ namespace XeniaRentalBackend.Controllers
             var created = await _employeeRepository.CreateEmployee(dto);
             return Ok(new { Status = "Success", Data = created });
         }
-      
-
-        //[HttpGet("zones/{companyId}")]
-        //public async Task<IActionResult> GetZones(int companyId)
-        //{
-        //    var employees = await _context.Employee
-        //        .Where(e => e.CompanyId == companyId && e.IsActive == true)
-        //        .Select(e => e.AreaZone)
-        //        .ToListAsync();
-
-        //    var zones = employees
-        //        .Where(z => !string.IsNullOrEmpty(z))
-        //        .SelectMany(z => z.Split(','))
-        //        .Select(z => z.Trim())
-        //        .Distinct()
-        //        .OrderBy(z => z)
-        //        .ToList();
-
-        //    return Ok(new { Status = "Success", Data = zones });
-        //}
 
 
- 
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -81,6 +63,21 @@ namespace XeniaRentalBackend.Controllers
 
             return Ok(new { Status = "Success", Data = employee });
         }
+
+
+        [HttpGet("")]
+        public async Task<IActionResult> GetById()
+        {
+            int id = _jwtHelperService.GetEmployeeId();
+            var employee = await _employeeRepository.GetEmployeeById(id);
+
+            if (employee == null)
+                return NotFound(new { Status = "Error", Message = "Employee not found." });
+
+            return Ok(new { Status = "Success", Data = employee });
+        }
+
+
 
 
         [HttpPut("{id}")]
@@ -96,6 +93,7 @@ namespace XeniaRentalBackend.Controllers
 
             return Ok(new { Status = "Success", Message = "Employee updated successfully." });
         }
+
 
         [HttpGet("mobilenumber/{mobilenumber}")]
         public async Task<ActionResult<PagedResultDto<XRS_Employee>>> MobileValidation(

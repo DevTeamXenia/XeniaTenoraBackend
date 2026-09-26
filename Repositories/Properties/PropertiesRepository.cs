@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using XeniaRentalBackend.Dtos;
 using XeniaRentalBackend.Models;
 using XeniaRentalBackend.Service.Common;
@@ -217,7 +217,7 @@ namespace XeniaRentalBackend.Repositories.Properties
 
         public async Task<IEnumerable<PropertyWithUnitsDto>> GetPropertyForApp()
         {
-            int tenantId = _jwtHelperService.GetCustomerId();
+            int tenantId = _jwtHelperService.GetTenantIdId();
 
 
             var assignedUnitIds = await _context.TenantAssignemnts
@@ -232,6 +232,41 @@ namespace XeniaRentalBackend.Repositories.Properties
                 from p in _context.Properties
                 join u in _context.Units on p.PropID equals u.PropID
                 where assignedUnitIds.Contains(u.UnitId)
+                group u by new { p.PropID, p.propertyName } into g
+                select new PropertyWithUnitsDto
+                {
+                    PropID = g.Key.PropID,
+                    PropertyName = g.Key.propertyName,
+                    Units = g.Select(u => new UnitPropertyDto
+                    {
+                        UnitID = u.UnitId,
+                        UnitName = u.UnitName
+                    }).ToList()
+                }
+            ).ToListAsync();
+
+            return result;
+        }
+
+        public async Task<IEnumerable<PropertyWithUnitsDto>> GetPropertyForEmployeeApp()
+        {
+            int employeeId = _jwtHelperService.GetEmployeeId();
+
+            if (employeeId == 0)
+                return new List<PropertyWithUnitsDto>();
+
+            var employeeAreaIds = await _context.EmployeeArea
+                .Where(ea => ea.EmployeeId == employeeId)
+                .Select(ea => ea.AreaId)
+                .ToListAsync();
+
+            if (!employeeAreaIds.Any())
+                return new List<PropertyWithUnitsDto>();
+
+            var result = await (
+                from p in _context.Properties
+                join u in _context.Units on p.PropID equals u.PropID
+                where p.propertyAreaId != null && employeeAreaIds.Contains(p.propertyAreaId.Value)
                 group u by new { p.PropID, p.propertyName } into g
                 select new PropertyWithUnitsDto
                 {

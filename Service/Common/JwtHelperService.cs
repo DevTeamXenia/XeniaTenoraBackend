@@ -49,6 +49,20 @@
             return 0;
         }
 
+
+        public int GetTenantIdId()
+        {
+            var customerIdClaim = _httpContextAccessor.HttpContext?.User.Claims
+                .FirstOrDefault(c => c.Type == "TenantId");
+
+            if (customerIdClaim != null && int.TryParse(customerIdClaim.Value, out int customerId))
+            {
+                return customerId;
+            }
+
+            return 0;
+        }
+
         public int GetEmployeeId()
         {
             var employeeIdClaim = _httpContextAccessor.HttpContext?.User.Claims

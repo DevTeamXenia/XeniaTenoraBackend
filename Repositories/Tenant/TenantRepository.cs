@@ -1,6 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using System.CodeDom.Compiler;
 using System.Net;
 using XeniaRentalBackend.Dtos;
 using XeniaRentalBackend.DTOs;
@@ -55,14 +54,27 @@ namespace XeniaRentalBackend.Repositories.Tenant
             return await query.ToListAsync();
         }
 
-        public async Task<PagedResultDto<TenantGetDto>> GetTenantsByCompanyId( int companyId,bool? status = null,string? search = null,int pageNumber = 1, int pageSize = 10)
+        public async Task<PagedResultDto<TenantGetDto>> GetTenantsByCompanyId( int companyId, bool? status = null, string? search = null, int pageNumber = 1, int pageSize = 10)
         {
-            var query = _context.Tenants         
+            int userId = _jwtHelperService.GetUserId();
+
+            var unitIds = await _context.UserMapping
+                .AsNoTracking()
+                .Where(m => m.UserID == userId && m.IsActive)
+                .Select(m => m.PropID)
+                .ToListAsync();
+
+            var query = _context.Tenants
                 .Include(t => t.TenantDocuments)
                     .ThenInclude(td => td.Documents)
                 .Where(t => t.companyID == companyId)
                 .AsNoTracking();
 
+      
+            query = query.Where(t =>
+                _context.TenantAssignemnts.Any(a => a.tenantID == t.tenantID && unitIds.Contains(a.unitID))
+                || !_context.TenantAssignemnts.Any(a => a.tenantID == t.tenantID)
+            );
 
             if (status.HasValue)
             {
@@ -118,7 +130,6 @@ namespace XeniaRentalBackend.Repositories.Tenant
                     .ToList() ?? new List<TenantDocumentDto>()
             }).ToList();
 
-   
             return new PagedResultDto<TenantGetDto>
             {
                 Data = items,
@@ -173,7 +184,7 @@ namespace XeniaRentalBackend.Repositories.Tenant
 
         public async Task<TenantProfileDto> GetProfileById()
         {
-            int tenantId = _jwtHelperService.GetCustomerId();
+            int tenantId = _jwtHelperService.GetTenantIdId();
 
             var tenant = await _context.Tenants
                 .FirstOrDefaultAsync(t => t.tenantID == tenantId);

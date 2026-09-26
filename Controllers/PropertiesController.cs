@@ -72,6 +72,19 @@ namespace XeniaRentalBackend.Controllers
             return Ok(property);
         }
 
+
+        [HttpGet("employeeApp")]
+        public async Task<IActionResult> GetPropertyForEmployeeApp()
+        {
+
+            var property = await _propertyRepository.GetPropertyForEmployeeApp();
+
+            if (property == null)
+                return NotFound("No property found for this user.");
+
+            return Ok(property);
+        }
+
         [HttpPost]
         public async Task<IActionResult> CreateProperties([FromBody] XRS_Properties properties)
         {

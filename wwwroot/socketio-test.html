@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tenora Realtime Socket Tester</title>
+    <!-- Microsoft SignalR JS Client (Standard WebSockets / Realtime for .NET Core) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+    <!-- Socket.IO JS Client (for Node / SocketIO compatibility testing) -->
+    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background: #f1f5f9; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        input, select, button { padding: 8px 12px; margin: 5px 0; border: 1px solid #cbd5e1; border-radius: 4px; }
+        button { background: #2563eb; color: white; border: none; cursor: pointer; }
+        button:hover { background: #1d4ed8; }
+        #log { background: #0f172a; color: #38bdf8; padding: 15px; border-radius: 6px; height: 350px; overflow-y: auto; font-family: monospace; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>⚡ Tenora Realtime Socket / SignalR Tester</h2>
+        <p>This backend uses ASP.NET Core SignalR WebSockets mapped at <code>/tenorahub</code>.</p>
+
+        <div>
+            <label><strong>Company ID:</strong></label>
+            <input type="number" id="companyId" value="1">
+            
+            <label><strong>Employee ID:</strong></label>
+            <input type="number" id="employeeId" placeholder="Optional">
+        </div>
+
+        <div style="margin-top: 10px;">
+            <button onclick="connectSignalR()">Connect SignalR (/tenorahub)</button>
+            <button onclick="triggerUpdate()" id="btnTrigger" disabled>Request Update</button>
+            <button onclick="disconnect()" id="btnDisconnect" style="background:#ef4444" disabled>Disconnect</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Live Received Payload Logs</h3>
+        <div id="log">Waiting to connect...</div>
+    </div>
+
+    <script>
+        let connection = null;
+
+        function log(msg) {
+            const el = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            el.textContent += `[${time}] ${msg}\n`;
+            el.scrollTop = el.scrollHeight;
+        }
+
+        async function connectSignalR() {
+            const companyId = parseInt(document.getElementById('companyId').value) || 1;
+            const empVal = document.getElementById('employeeId').value;
+            const employeeId = empVal ? parseInt(empVal) : null;
+
+            log("Connecting to /tenorahub...");
+            connection = new signalR.HubConnectionBuilder()
+                .withUrl("/tenorahub")
+                .withAutomaticReconnect()
+                .build();
+
+            connection.on("ReceiveMaintenanceUpdate", (data) => {
+                log("📩 ReceiveMaintenanceUpdate:\n" + JSON.stringify(data, null, 2));
+            });
+
+            try {
+                await connection.start();
+                log("✅ Connected to /tenorahub! ConnectionID: " + connection.connectionId);
+
+                document.getElementById('btnTrigger').disabled = false;
+                document.getElementById('btnDisconnect').disabled = false;
+
+                await connection.invoke("JoinCompanyGroup", companyId);
+                log(`Joined company-${companyId} group`);
+
+                if (employeeId) {
+                    await connection.invoke("JoinEmployeeGroup", companyId, employeeId);
+                    log(`Joined company-${companyId}-employee-${employeeId} group`);
+                }
+            } catch (err) {
+                log("❌ Connection Error: " + err.toString());
+            }
+        }
+
+        async function triggerUpdate() {
+            if (!connection) return;
+            const companyId = parseInt(document.getElementById('companyId').value) || 1;
+            const empVal = document.getElementById('employeeId').value;
+            const employeeId = empVal ? parseInt(empVal) : null;
+
+            log("Sending SendTenoraUpdate request...");
+            try {
+                await connection.invoke("SendTenoraUpdate", companyId, null, employeeId, null, null, null, null);
+                log("✅ SendTenoraUpdate invoked");
+            } catch (err) {
+                log("❌ Error: " + err.toString());
+            }
+        }
+
+        async function disconnect() {
+            if (connection) {
+                await connection.stop();
+                connection = null;
+                log("Disconnected.");
+                document.getElementById('btnTrigger').disabled = true;
+                document.getElementById('btnDisconnect').disabled = true;
+            }
+        }
+    </script>
+</body>
+</html>

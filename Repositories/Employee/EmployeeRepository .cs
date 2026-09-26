@@ -55,26 +55,6 @@ namespace XeniaRentalBackend.Repositories.EmployeeMaster
 
             var totalRecords = await query.CountAsync();
 
-
-            //var items = await query
-            //    .OrderBy(e => e.Name)
-            //    .Skip((pageNumber - 1) * pageSize)
-            //    .Take(pageSize)
-            //    .Select(e => new XRS_Employee
-            //    {
-            //        EmployeeId = e.EmployeeId,
-            //        CompanyId = e.CompanyId,
-            //        EmployeeCode = e.EmployeeCode,
-            //        Name = e.Name,
-            //        Department = e.Department,
-            //        CategoryId = e.CategoryId,
-            //        WhatAppNumber = e.WhatAppNumber,
-            //        MobileNumber = e.MobileNumber,
-            //        Password = e.Password, 
-            //        IsActive = e.IsActive,
-            //    })
-            //    .ToListAsync();
-
             var items = await (
             from e in _context.Employee
             join c in _context.MaintenanceCategories
@@ -129,7 +109,6 @@ namespace XeniaRentalBackend.Repositories.EmployeeMaster
             await _context.Employee.AddAsync(employee);
             await _context.SaveChangesAsync();
 
-            //Employee area mapping
             int employeeId = employee.EmployeeId;
             if (dto.EmployeeAreas != null && dto.EmployeeAreas.Any())
             {
@@ -198,7 +177,6 @@ namespace XeniaRentalBackend.Repositories.EmployeeMaster
             employee.IsActive = dto.IsActive;
             employee.UpdatedAt = DateTime.Now;
 
-            // Delete existing employee-> area mapping
             var existingAreas = await _context.EmployeeArea
                 .Where(x => x.EmployeeId == employee.EmployeeId)
                 .ToListAsync();
@@ -207,7 +185,7 @@ namespace XeniaRentalBackend.Repositories.EmployeeMaster
             {
                 _context.EmployeeArea.RemoveRange(existingAreas);
             }
-            //Add employee-> area mapping
+       
             if (dto.EmployeeAreas != null && dto.EmployeeAreas.Any())
             {
                 var newAreas = dto.EmployeeAreas.Select(x => new XRS_EmployeeArea
@@ -228,7 +206,7 @@ namespace XeniaRentalBackend.Repositories.EmployeeMaster
             await _context.SaveChangesAsync();
             return true;
         }
-        //Mobile number validation
+   
         public async Task<ResponseDto> ValidationByMobileNo(int companyId, string? mobilenumber)
         {
             bool exists = await _context.Employee

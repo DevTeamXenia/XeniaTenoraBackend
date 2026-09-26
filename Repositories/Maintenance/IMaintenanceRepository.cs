@@ -1,4 +1,4 @@
-﻿using XeniaRentalBackend.Dtos;
+using XeniaRentalBackend.Dtos;
 using XeniaRentalBackend.Models;
 using XeniaTenoraBackend.Dtos;
 
@@ -7,7 +7,7 @@ namespace XeniaRentalBackend.Repositories.ManageMaintenance
     public interface IMaintenanceRepository
     {
 
-        Task<List<MaintenanceStatusGroupDto>> GetMaintenance(int companyId, int? tenantId, string? search);
+        Task<List<MaintenanceStatusGroupDto>> GetMaintenance(int companyId, int? tenantId, int? employeeId, string? search);
         Task<MaintenanceResponseDto> CreateMaintenance(MaintenanceDto dto);
         Task<bool> UpdateMaintenance(int maintainceId, int? employeeId, string status);
         Task<MaintenanceDetailsDto> GetMaintenanceDetails(int maintenanceId, int companyId);

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using System.ComponentModel.DataAnnotations;
 
 
@@ -22,8 +22,8 @@ namespace XeniaRentalBackend.Dtos
     [Required]
     public string Complaint { get; set; } = string.Empty;
 
-        [Required]
-        public string PreferredVisitTime { get; set; } = string.Empty;
+    [Required]
+    public string PreferredVisitTime { get; set; } = string.Empty;
 
     [Required]
     public int TenantId { get; set; }

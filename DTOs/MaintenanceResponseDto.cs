@@ -27,6 +27,7 @@ namespace XeniaRentalBackend.Dtos
         public string PreferredVisitTime { get; set; } = string.Empty;
         
         public string Status { get; set; } = "Pending";
+        public bool IsOverdue { get; set; }
         public int? AssignedEmployeeId { get; set; }
         
         public bool IsActive { get; set; }

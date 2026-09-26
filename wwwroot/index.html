@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
     <link rel="stylesheet" href="/style.css" />
@@ -30,8 +30,9 @@
                             An all-in-one flat rental management app for easy tenant and rent management.
                         </p>
                     </div>
-                    <div class="btns">
-                        <button class="btns_more" onclick="redirectToSwagger()">Get Started</button>
+                    <div class="btns" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btns_more" onclick="redirectToSwagger()">Swagger API Docs</button>
+                        <button class="btns_more" style="background-color: #4f46e5;" onclick="redirectToSocketTester()">Socket Tester</button>
                     </div>
                 </div>
             </div>
@@ -79,11 +80,14 @@
             </li>
         </ul>
     </div>
-    <div class="overlay"></div>\
+    <div class="overlay"></div>
     
     <script>
     function redirectToSwagger() {
         window.location.href = '/swagger';
+    }
+    function redirectToSocketTester() {
+        window.location.href = '/socket-test.html';
     }
     </script>
 </body>

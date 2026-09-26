@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using XeniaRentalBackend.Dtos;
 using XeniaRentalBackend.Models;
 using XeniaTenoraBackend.Dtos;
@@ -15,7 +15,7 @@ namespace XeniaRentalBackend.Repositories.ManageMaintenance
           
         }
 
-        public async Task<List<MaintenanceStatusGroupDto>> GetMaintenance(int companyId, int? tenantId, string? search)
+        public async Task<List<MaintenanceStatusGroupDto>> GetMaintenance(int companyId, int? tenantId, int? employeeId, string? search)
         {
             var now = DateTime.Now;
 
@@ -43,15 +43,12 @@ namespace XeniaRentalBackend.Repositories.ManageMaintenance
                             CategoryId = m.CategoryId,
                             CategoryName = category != null ? category.CategoryName : null,
                             Complaint = m.Complaint,
-
-                            Status =
-                                category != null &&
-                                m.CreatedAt.AddDays(category.SLADays) < now &&
-                                (m.Status == "Pending" || m.Status == "InProgress")
-                                    ? "Overdue"
-                                    : m.Status,
-
+                            Status = m.Status,
+                            IsOverdue = category != null &&
+                                        m.CreatedAt.AddDays(category.SLADays) < now &&
+                                        (m.Status == "Pending" || m.Status == "InProgress"),
                             AssignedEmployeeId = m.AssignedEmployeeId,
+                            PreferredVisitTime = m.PreferredVisitTime,
                             IsActive = m.IsActive,
                             CreatedAt = m.CreatedAt,
                             UpdatedAt = m.UpdatedAt,
@@ -60,6 +57,31 @@ namespace XeniaRentalBackend.Repositories.ManageMaintenance
 
             if (tenantId.HasValue)
                 query = query.Where(m => m.TenantId == tenantId.Value);
+
+            if (employeeId.HasValue && employeeId.Value > 0)
+            {
+                var employee = await _context.Employee
+                    .FirstOrDefaultAsync(e => e.EmployeeId == employeeId.Value);
+
+                if (employee != null && string.Equals(employee.Department, "Administrator", StringComparison.OrdinalIgnoreCase))
+                {
+                    var employeeAreaIds = await _context.EmployeeArea
+                        .Where(ea => ea.EmployeeId == employeeId.Value)
+                        .Select(ea => ea.AreaId)
+                        .ToListAsync();
+
+                    var propertyIds = await _context.Properties
+                        .Where(p => p.propertyAreaId != null && employeeAreaIds.Contains(p.propertyAreaId.Value))
+                        .Select(p => p.PropID)
+                        .ToListAsync();
+
+                    query = query.Where(m => propertyIds.Contains(m.PropertyId));
+                }
+                else
+                {
+                    query = query.Where(m => m.AssignedEmployeeId == employeeId.Value);
+                }
+            }
 
             if (!string.IsNullOrEmpty(search))
             {
@@ -103,7 +125,7 @@ namespace XeniaRentalBackend.Repositories.ManageMaintenance
                             from tenant in tt.DefaultIfEmpty()
                             join c in _context.MaintenanceCategories on m.CategoryId equals c.CategoryId into cc
                             from category in cc.DefaultIfEmpty()
-                            where m.CompanyId == companyId && m.IsActive
+                            where (companyId == 0 || m.CompanyId == companyId) && m.IsActive
                             select new MaintenanceResponseDto
                             {
                                 MaintenanceId = m.MaintenanceId,
@@ -120,6 +142,9 @@ namespace XeniaRentalBackend.Repositories.ManageMaintenance
                                 Complaint = m.Complaint,
                                 PreferredVisitTime = m.PreferredVisitTime,
                                 Status = m.Status,
+                                IsOverdue = category != null &&
+                                            m.CreatedAt.AddDays(category.SLADays) < DateTime.Now &&
+                                            (m.Status == "Pending" || m.Status == "InProgress"),
                                 AssignedEmployeeId = m.AssignedEmployeeId,
                                 IsActive = m.IsActive,
                                 CreatedAt = m.CreatedAt,
@@ -221,6 +246,10 @@ namespace XeniaRentalBackend.Repositories.ManageMaintenance
                 Complaint = maintenance.Complaint,
                 PreferredVisitTime = maintenance.PreferredVisitTime,
                 Status = maintenance.Status,
+                IsOverdue = category != null &&
+                            category.SLADays > 0 &&
+                            maintenance.CreatedAt.AddDays(category.SLADays) < DateTime.Now &&
+                            (maintenance.Status == "Pending" || maintenance.Status == "InProgress"),
                 AssignedEmployeeId = maintenance.AssignedEmployeeId,
                 IsActive = maintenance.IsActive,
                 CreatedAt = maintenance.CreatedAt,

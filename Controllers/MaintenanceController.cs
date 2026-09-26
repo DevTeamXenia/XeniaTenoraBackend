@@ -1,9 +1,9 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using XeniaRentalBackend.Dtos;
 using XeniaRentalBackend.Repositories.ManageMaintenance;
-
 using XeniaRentalBackend.Models;
+using XeniaTenoraBackend.Service.Socket;
 
 namespace XeniaRentalBackend.Controllers
 {
@@ -13,11 +13,14 @@ namespace XeniaRentalBackend.Controllers
     public class MaintenanceController : ControllerBase
     {
         private readonly IMaintenanceRepository _manageMaintenanceRepository;
+        private readonly ITenoraUpdateService _tenoraUpdateService;
 
-        public MaintenanceController(IMaintenanceRepository manageMaintenanceRepository)
+        public MaintenanceController(
+            IMaintenanceRepository manageMaintenanceRepository,
+            ITenoraUpdateService tenoraUpdateService)
         {
             _manageMaintenanceRepository = manageMaintenanceRepository;
- 
+            _tenoraUpdateService = tenoraUpdateService;
         }
 
         #region CATEGORY
@@ -99,6 +102,16 @@ namespace XeniaRentalBackend.Controllers
 
         #endregion
 
+        [HttpGet("list/{companyId}")]
+        public async Task<IActionResult> GetMaintenance(int companyId, int? tenantId = null, int? employeeId = null, string? search = null)
+        {
+            var result = await _manageMaintenanceRepository.GetMaintenance(companyId, tenantId, employeeId, search);
+            return Ok(new
+            {
+                Status = "Success",
+                Data = result
+            });
+        }
 
         [HttpPost]
         public async Task<IActionResult> CreateMaintenance([FromBody] MaintenanceDto dto)
@@ -107,6 +120,28 @@ namespace XeniaRentalBackend.Controllers
                 return BadRequest(new { Status = "Error", Message = "Invalid data." });
 
             var result = await _manageMaintenanceRepository.CreateMaintenance(dto);
+
+            try
+            {
+                if (result.AssignedEmployeeId.HasValue)
+                {
+                    await _tenoraUpdateService.SendTenoraUpdate(
+                        result.CompanyId,
+                        result.TenantId,
+                        result.AssignedEmployeeId
+                    );
+                }
+
+                await _tenoraUpdateService.SendTenoraUpdate(
+                    result.CompanyId,
+                    result.TenantId,
+                    employeeId: null
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Socket broadcast error: " + ex.Message);
+            }
 
             return Ok(new
             {
@@ -128,13 +163,15 @@ namespace XeniaRentalBackend.Controllers
         }
 
         [HttpPut("update/{maintenanceId}")]
-        public async Task<IActionResult> UpdateMaintenance(int maintainceId, int? employeeId, string status)
+        public async Task<IActionResult> UpdateMaintenance(int maintenanceId, int? employeeId, string status)
         {
             if (string.IsNullOrEmpty(status))
                 return BadRequest("Status is required");
 
+            var maintenanceDetails = await _manageMaintenanceRepository.GetMaintenanceDetails(maintenanceId, 0);
+
             var result = await _manageMaintenanceRepository.UpdateMaintenance(
-                maintainceId,
+                maintenanceId,
                 employeeId,
                 status
             );
@@ -142,13 +179,33 @@ namespace XeniaRentalBackend.Controllers
             if (!result)
                 return NotFound("Maintenance not found or update failed");
 
+            try
+            {
+                int companyId = maintenanceDetails?.Current?.CompanyId ?? 0;
+                int? tenantId = maintenanceDetails?.Current?.TenantId;
+                int? targetEmpId = employeeId ?? maintenanceDetails?.Current?.AssignedEmployeeId;
+
+                if (companyId > 0)
+                {
+                    if (targetEmpId.HasValue)
+                    {
+                        await _tenoraUpdateService.SendTenoraUpdate(companyId, tenantId, targetEmpId.Value);
+                    }
+                    await _tenoraUpdateService.SendTenoraUpdate(companyId, tenantId, employeeId: null);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Socket broadcast error on update: " + ex.Message);
+            }
+
             return Ok(new
             {
                 Message = "Maintenance updated successfully"
             });
         }
 
-    
+
         [HttpGet("dashboard/{companyId}")]
         public async Task<IActionResult> GetDashboard(int companyId)
         {

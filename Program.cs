@@ -25,8 +25,6 @@ using XeniaRentalBackend.Repositories.Properties;
 using XeniaRentalBackend.Repositories.Register;
 using XeniaRentalBackend.Repositories.Report;
 using XeniaRentalBackend.Repositories.Subscription;
-
-//using XeniaRentalBackend.Repositories.Service;
 using XeniaRentalBackend.Repositories.Tenant;
 using XeniaRentalBackend.Repositories.TenantAssignment;
 using XeniaRentalBackend.Repositories.Unit;
@@ -109,11 +107,7 @@ builder.Services.AddCors(options =>
         policy =>
         {
             policy
-                .WithOrigins(
-                    "https://rental.xeniapos.com",
-                    "http://localhost:3000",
-                    "http://localhost:5173"
-                )
+                .SetIsOriginAllowed(_ => true)
                 .AllowAnyHeader()
                 .AllowAnyMethod()
                 .AllowCredentials();
@@ -259,6 +253,8 @@ var app = builder.Build();
 app.UseSwagger();
 
 app.UseSwaggerUI();
+
+app.UseDefaultFiles();
 
 app.UseStaticFiles();
 
