@@ -1,4 +1,4 @@
-﻿using XeniaRentalBackend.Dtos;
+using XeniaRentalBackend.Dtos;
 using XeniaRentalBackend.Models;
 using XeniaTenoraBackend.DTOs;
 
@@ -16,5 +16,6 @@ namespace XeniaRentalBackend.Repositories.EmployeeMaster
         Task<XRS_Employee?> GetEmployeeById(int employeeId);
         Task<bool> UpdateEmployee(int id, EmployeeMasterDto dto);
         Task<ResponseDto> ValidationByMobileNo(int companyId, string? mobileNumber);
+        Task<IEnumerable<PropertyServiceCategoryDto>> GetEmployeesByPropertyId(int propertyId);
     }
 }

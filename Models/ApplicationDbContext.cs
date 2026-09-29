@@ -1,4 +1,4 @@
-﻿
+
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using XeniaRentalBackend.Models.Rental;
@@ -97,6 +97,8 @@ namespace XeniaRentalBackend.Models
         public DbSet<XRS_MaintenancePhotos> MaintenancePhotos { get; set; }
 
         public DbSet<XRS_Area> Areas { get; set; }
+
+        public DbSet<XRS_AppVersion> AppVersion { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

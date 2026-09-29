@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using XeniaRentalBackend.DTOs;
 using XeniaRentalBackend.Repositories.Auth;
@@ -186,6 +186,95 @@ namespace XeniaRentalBackend.Controllers
             });
         }
 
+        #region APP VERSION CHECK ENDPOINTS
+
+        [HttpPost("version/check")]
+        public async Task<IActionResult> CheckAppVersionPost([FromBody] AppVersionCheckRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new { Status = "Error", Message = "Invalid request payload.", Errors = ModelState });
+            }
+
+            var result = await _authRepository.CheckAppVersionAsync(request.Platform, request.AppVersion);
+
+            if (result == null)
+            {
+                return NotFound(new
+                {
+                    Status = "Error",
+                    Message = $"No active version information found for platform '{request.Platform}'."
+                });
+            }
+
+            return Ok(new
+            {
+                Status = "Success",
+                Data = result
+            });
+        }
+
+        [HttpGet("version/check")]
+        public async Task<IActionResult> CheckAppVersionGet([FromQuery] string platform, [FromQuery] string appVersion)
+        {
+            if (string.IsNullOrWhiteSpace(platform) || string.IsNullOrWhiteSpace(appVersion))
+            {
+                return BadRequest(new
+                {
+                    Status = "Error",
+                    Message = "Both 'platform' and 'appVersion' query parameters are required."
+                });
+            }
+
+            var result = await _authRepository.CheckAppVersionAsync(platform, appVersion);
+
+            if (result == null)
+            {
+                return NotFound(new
+                {
+                    Status = "Error",
+                    Message = $"No active version information found for platform '{platform}'."
+                });
+            }
+
+            return Ok(new
+            {
+                Status = "Success",
+                Data = result
+            });
+        }
+
+        [HttpGet("version/all")]
+        public async Task<IActionResult> GetAllAppVersions([FromQuery] string? platform = null)
+        {
+            var versions = await _authRepository.GetAppVersionsAsync(platform);
+            return Ok(new
+            {
+                Status = "Success",
+                Data = versions
+            });
+        }
+
+        [HttpPost("version/save")]
+        public async Task<IActionResult> SaveAppVersion([FromBody] SaveAppVersionDto request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new { Status = "Error", Message = "Invalid payload.", Errors = ModelState });
+            }
+
+            var result = await _authRepository.SaveAppVersionAsync(request);
+
+            return Ok(new
+            {
+                Status = "Success",
+                Message = "App version details saved successfully.",
+                Data = result
+            });
+        }
+
+        #endregion
 
     }
 }
+

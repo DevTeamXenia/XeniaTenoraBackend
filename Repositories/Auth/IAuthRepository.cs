@@ -1,4 +1,4 @@
-﻿
+
 using Microsoft.AspNetCore.Mvc;
 using XeniaRentalBackend.DTOs;
 using XeniaRentalBackend.Models;
@@ -27,5 +27,8 @@ namespace XeniaRentalBackend.Repositories.Auth
         Task<XRS_Employee?> AuthenticateEmployee(EmployeeLoginRequest request);
         string GenerateJwtEmployeeToken(XRS_Employee employee);
 
+        Task<AppVersionCheckResponseDto?> CheckAppVersionAsync(string platform, string currentVersion);
+        Task<List<XRS_AppVersion>> GetAppVersionsAsync(string? platform = null);
+        Task<XRS_AppVersion> SaveAppVersionAsync(SaveAppVersionDto request);
     }
 }

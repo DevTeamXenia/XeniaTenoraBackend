@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -383,7 +383,115 @@ namespace XeniaRentalBackend.Repositories.Auth
 
         #endregion
 
+        #region APP VERSION CHECK
+        public async Task<AppVersionCheckResponseDto?> CheckAppVersionAsync(string platform, string currentVersion)
+        {
+            if (string.IsNullOrWhiteSpace(platform))
+                return null;
+
+            var appVersionInfo = await _context.AppVersion
+                .Where(v => v.Platform.ToLower() == platform.ToLower() && v.IsActive)
+                .OrderByDescending(v => v.VersionId)
+                .FirstOrDefaultAsync();
+
+            if (appVersionInfo == null)
+            {
+                return null;
+            }
+
+            bool isUpdateAvailable = false;
+            bool isForceUpdate = appVersionInfo.ForceUpdate;
+
+            if (Version.TryParse(currentVersion, out var parsedCurrent))
+            {
+                if (Version.TryParse(appVersionInfo.AppVersion, out var parsedLatest))
+                {
+                    isUpdateAvailable = parsedCurrent < parsedLatest;
+                }
+                else
+                {
+                    isUpdateAvailable = string.Compare(currentVersion, appVersionInfo.AppVersion, StringComparison.OrdinalIgnoreCase) < 0;
+                }
+
+                if (Version.TryParse(appVersionInfo.MinVersion, out var parsedMin))
+                {
+                    if (parsedCurrent < parsedMin)
+                    {
+                        isForceUpdate = true;
+                    }
+                }
+                else if (string.Compare(currentVersion, appVersionInfo.MinVersion, StringComparison.OrdinalIgnoreCase) < 0)
+                {
+                    isForceUpdate = true;
+                }
+            }
+            else
+            {
+                isUpdateAvailable = string.Compare(currentVersion, appVersionInfo.AppVersion, StringComparison.OrdinalIgnoreCase) < 0;
+                if (string.Compare(currentVersion, appVersionInfo.MinVersion, StringComparison.OrdinalIgnoreCase) < 0)
+                {
+                    isForceUpdate = true;
+                }
+            }
+
+            return new AppVersionCheckResponseDto
+            {
+                Platform = appVersionInfo.Platform,
+                CurrentAppVersion = currentVersion,
+                LatestVersion = appVersionInfo.AppVersion,
+                MinVersion = appVersionInfo.MinVersion,
+                IsUpdateAvailable = isUpdateAvailable,
+                IsForceUpdate = isForceUpdate,
+                UpdateUrl = appVersionInfo.UpdateUrl,
+                ReleaseNotes = appVersionInfo.ReleaseNotes
+            };
+        }
+
+        public async Task<List<XRS_AppVersion>> GetAppVersionsAsync(string? platform = null)
+        {
+            var query = _context.AppVersion.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(platform))
+            {
+                query = query.Where(v => v.Platform.ToLower() == platform.ToLower());
+            }
+
+            return await query.OrderByDescending(v => v.VersionId).ToListAsync();
+        }
+
+        public async Task<XRS_AppVersion> SaveAppVersionAsync(SaveAppVersionDto request)
+        {
+            XRS_AppVersion? entity = null;
+
+            if (request.VersionId.HasValue && request.VersionId.Value > 0)
+            {
+                entity = await _context.AppVersion.FirstOrDefaultAsync(v => v.VersionId == request.VersionId.Value);
+            }
+
+            if (entity == null)
+            {
+                entity = new XRS_AppVersion
+                {
+                    CreatedAt = DateTime.Now
+                };
+                await _context.AppVersion.AddAsync(entity);
+            }
+
+            entity.Platform = request.Platform;
+            entity.AppVersion = request.AppVersion;
+            entity.MinVersion = request.MinVersion;
+            entity.ForceUpdate = request.ForceUpdate;
+            entity.UpdateUrl = request.UpdateUrl;
+            entity.ReleaseNotes = request.ReleaseNotes;
+            entity.IsActive = request.IsActive;
+            entity.UpdatedAt = DateTime.Now;
+
+            await _context.SaveChangesAsync();
+            return entity;
+        }
+        #endregion
 
     }
 
 }
+

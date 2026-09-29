@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using XeniaRentalBackend.Dtos;
 using XeniaRentalBackend.Models;
@@ -105,6 +105,14 @@ namespace XeniaRentalBackend.Controllers
                 return NotFound(new { Status = "Error", Message = "No employees found." });
 
             return Ok(new { Status = "Success", Data = msg });
+        }
+
+  
+        [HttpGet("service/{propertyId}")]
+        public async Task<IActionResult> GetEmployeesByProperty(int propertyId)
+        {
+            var data = await _employeeRepository.GetEmployeesByPropertyId(propertyId);
+            return Ok(new { Status = "Success", Data = data });
         }
     }
 }

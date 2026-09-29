@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using XeniaRentalBackend.Dtos;
 using XeniaRentalBackend.Models;
 using XeniaTenoraBackend.DTOs;
@@ -220,6 +220,62 @@ namespace XeniaRentalBackend.Repositories.EmployeeMaster
                     ? "Mobile Number already exists."
                     : "Mobile Number does not exist."
             };
+        }
+
+        public async Task<IEnumerable<PropertyServiceCategoryDto>> GetEmployeesByPropertyId(int propertyId)
+        {
+            var property = await _context.Properties
+                .FirstOrDefaultAsync(p => p.PropID == propertyId);
+
+            if (property == null || property.propertyAreaId == null)
+                return new List<PropertyServiceCategoryDto>();
+
+            int areaId = property.propertyAreaId.Value;
+
+            var employees = await (
+                from ea in _context.EmployeeArea
+                join e in _context.Employee on ea.EmployeeId equals e.EmployeeId
+                join c in _context.MaintenanceCategories on e.CategoryId equals c.CategoryId into cc
+                from category in cc.DefaultIfEmpty()
+                where ea.AreaId == areaId && e.IsActive
+                select new
+                {
+                    e.EmployeeId,
+                    e.EmployeeCode,
+                    e.Name,
+                    e.Department,
+                    e.MobileNumber,
+                    e.WhatAppNumber,
+                    e.IsActive,
+                    CategoryId = e.CategoryId,
+                    CategoryName = category != null ? category.CategoryName : "General",
+                    SLADays = category != null ? category.SLADays : 0,
+                    SLAHours = category != null ? category.SLAHours : 0
+                }
+            ).ToListAsync();
+
+            var result = employees
+                .GroupBy(x => new { x.CategoryId, x.CategoryName, x.SLADays, x.SLAHours })
+                .Select(g => new PropertyServiceCategoryDto
+                {
+                    CategoryId = g.Key.CategoryId,
+                    CategoryName = g.Key.CategoryName,
+                    SLADays = g.Key.SLADays,
+                    SLAHours = g.Key.SLAHours,
+                    Employees = g.Select(e => new EmployeeBasicDto
+                    {
+                        EmployeeId = e.EmployeeId,
+                        EmployeeCode = e.EmployeeCode,
+                        Name = e.Name,
+                        Department = e.Department,
+                        MobileNumber = e.MobileNumber,
+                        WhatAppNumber = e.WhatAppNumber,
+                        IsActive = e.IsActive
+                    }).GroupBy(x => x.EmployeeId).Select(group => group.First()).ToList()
+                })
+                .ToList();
+
+            return result;
         }
     }
 }
